@@ -12,8 +12,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
+      padding: 20px;
     }
     .box {
       background: #1e1e1e;
@@ -23,97 +24,277 @@
       max-width: 400px;
       box-shadow: 0 0 20px rgba(255,0,0,0.4);
     }
-    h1 { text-align: center; color: #ff3b3b; }
+    h1 { text-align: center; color: #ff3b3b; margin-bottom: 10px; }
+    .objective {
+      background: #2a2a2a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 2px solid #ff3b3b;
+    }
+    .counters {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+    .counter {
+      text-align: center;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      flex: 1;
+      margin: 0 5px;
+    }
+    .counter-label {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 5px;
+    }
+    .counter-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ff3b3b;
+    }
     button {
       width: 100%;
-      padding: 12px;
+      padding: 15px;
       margin-top: 10px;
       border: none;
       border-radius: 8px;
       background: #ff3b3b;
       color: white;
       font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
+      transition: all 0.3s;
     }
-    button:hover { background: #ff5c5c; }
-    .result { margin-top: 15px; text-align: center; }
+    button:hover { 
+      background: #ff5c5c;
+      transform: scale(1.02);
+    }
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result { 
+      margin-top: 20px;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .success {
+      background: #1a4d1a;
+      border: 2px solid #4caf50;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .voters {
+      margin-top: 15px;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .voters h3 {
+      margin-top: 0;
+      color: #ff3b3b;
+      font-size: 16px;
+    }
+    .voter-item {
+      padding: 5px;
+      margin: 5px 0;
+      background: #1e1e1e;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .loading {
+      text-align: center;
+      color: #aaa;
+      padding: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: 2px solid #ff3b3b;
+      border-radius: 8px;
+      background: #2a2a2a;
+      color: white;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    input::placeholder {
+      color: #888;
+    }
   </style>
 </head>
 <body>
   <div class="box">
-    <h1>Sondage officiel</h1>
-    <p>📸 Objectif : à <strong>30 oui</strong>, Alexis poste une <strong>photo honteuse</strong> 😈</p>
-    <button onclick="vote('oui')">Oui, évidemment</button>
-    <button onclick="vote('non')">Non (menteur)</button>
+    <h1>🔥 Sondage officiel 🔥</h1>
+    
+    <div class="objective">
+      <p style="margin: 0;">📸 Objectif : à <strong>30 OUI</strong></p>
+      <p style="margin: 5px 0 0 0;">Alexis poste une <strong>photo honteuse</strong> 😈</p>
+    </div>
+
+    <div class="counters">
+      <div class="counter">
+        <div class="counter-label">👍 OUI</div>
+        <div class="counter-value" id="ouiCount">-</div>
+      </div>
+      <div class="counter">
+        <div class="counter-label">👎 NON</div>
+        <div class="counter-value" id="nonCount">-</div>
+      </div>
+    </div>
+
+    <input type="text" id="nameInput" placeholder="Entre ton prénom..." maxlength="30" />
+    
+    <button id="btnOui" onclick="vote('oui')">✅ Oui, évidemment</button>
+    <button id="btnNon" onclick="vote('non')">❌ Non (menteur)</button>
+    
     <div class="result" id="result"></div>
-    <div class="result" id="voters"></div>
+    
+    <div class="voters" id="votersSection" style="display: none;">
+      <h3>📋 Ont voté :</h3>
+      <div id="votersList"></div>
+    </div>
   </div>
 
   <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDXdzhzD0dIKU-uEn-wUMsLo2rYhbFJozg",
-    authDomain: "les-pieds-de-alexis.firebaseapp.com",
-    databaseURL: "https://les-pieds-de-alexis-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "les-pieds-de-alexis",
-    storageBucket: "les-pieds-de-alexis.appspot.com",
-    messagingSenderId: "605697210821",
-    appId: "1:605697210821:web:2915887c8fe5e5244833ac"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDXdzhzD0dIKU-uEn-wUMsLo2rYhbFJozg",
+      authDomain: "les-pieds-de-alexis.firebaseapp.com",
+      databaseURL: "https://les-pieds-de-alexis-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "les-pieds-de-alexis",
+      storageBucket: "les-pieds-de-alexis.appspot.com",
+      messagingSenderId: "605697210821",
+      appId: "1:605697210821:web:2915887c8fe5e5244833ac"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const votesRef = ref(db, 'votes');
-  const votersRef = ref(db, 'voters');
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const votesRef = ref(db, 'votes');
+    const votersRef = ref(db, 'voters');
 
-  let hasVoted = localStorage.getItem('hasVoted');
+    // Écoute en temps réel des changements
+    onValue(votesRef, (snapshot) => {
+      updateDisplay(snapshot);
+    });
 
-  async function updateDisplay() {
-    const votersSnap = await get(votersRef);
-    const voters = votersSnap.val() || {};() {
-    const snapshot = await get(votesRef);
-    const data = snapshot.val() || { oui: 0, non: 0 };
+    onValue(votersRef, (snapshot) => {
+      updateVotersList(snapshot);
+    });
 
-    let message = `Oui : ${data.oui} vote(s)<br>Non : ${data.non} vote(s)`;
-    if (data.oui >= 30) {
-      message += '<br><br>🎉 <strong>OBJECTIF ATTEINT</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
-    }
-    document.getElementById('result').innerHTML = message;
-    document.getElementById('voters').innerHTML = '<br><strong>Ont voté :</strong><br>' + Object.values(voters).join('<br>');
-  }
+    function updateDisplay(snapshot) {
+      const data = snapshot.val() || { oui: 0, non: 0 };
+      
+      document.getElementById('ouiCount').textContent = data.oui || 0;
+      document.getElementById('nonCount').textContent = data.non || 0;
 
-  window.vote = async function(choice) {
-    if (hasVoted) {
-      alert('❌ Tu as déjà voté sur CET appareil');
-      return;
-    }
-
-    const name = prompt('Entre ton prénom (obligatoire) :');
-    if (!name) return;
-    if (hasVoted) {
-      alert('❌ Tu as déjà voté !');
-      return;
+      const resultDiv = document.getElementById('result');
+      if (data.oui >= 30) {
+        resultDiv.className = 'result success';
+        resultDiv.innerHTML = '🎉 <strong>OBJECTIF ATTEINT !</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
+      } else {
+        resultDiv.className = 'result';
+        const remaining = 30 - (data.oui || 0);
+        resultDiv.innerHTML = `Plus que <strong>${remaining}</strong> OUI pour atteindre l'objectif !`;
+      }
     }
 
-    const confirmation = confirm(`Confirme-tu ton vote : ${choice.toUpperCase()} ?`);
-    if (!confirmation) return;
+    function updateVotersList(snapshot) {
+      const voters = snapshot.val() || {};
+      const votersList = document.getElementById('votersList');
+      const votersSection = document.getElementById('votersSection');
+      
+      const votersArray = Object.values(voters);
+      
+      if (votersArray.length === 0) {
+        votersSection.style.display = 'none';
+        return;
+      }
+      
+      votersSection.style.display = 'block';
+      votersList.innerHTML = votersArray
+        .reverse() // Les plus récents en premier
+        .map(voter => `<div class="voter-item">${voter}</div>`)
+        .join('');
+    }
 
-    const snapshot = await get(votesRef);
-    const data = snapshot.val() || { oui: 0, non: 0 };
+    window.vote = async function(choice) {
+      const nameInput = document.getElementById('nameInput');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        alert('❌ Entre ton prénom avant de voter !');
+        nameInput.focus();
+        return;
+      }
 
-    data[choice]++;
-    await update(votesRef, data);
-    await update(votersRef, { [Date.now()]: name + ' → ' + choice.toUpperCase() });
+      // Vérifier si la personne a déjà voté
+      const votersSnap = await get(votersRef);
+      const voters = votersSnap.val() || {};
+      const nameLower = name.toLowerCase();
+      
+      const alreadyVoted = Object.values(voters).some(voter => {
+        const voterName = voter.split(' → ')[0].toLowerCase();
+        return voterName === nameLower;
+      });
 
-    localStorage.setItem('hasVoted', 'true');
-    hasVoted = true;
+      if (alreadyVoted) {
+        const revote = confirm(`⚠️ "${name}" a déjà voté !\n\nVeux-tu modifier ton vote ?`);
+        if (!revote) return;
+        
+        // Supprimer l'ancien vote de cette personne
+        for (let key in voters) {
+          if (voters[key].split(' → ')[0].toLowerCase() === nameLower) {
+            const oldChoice = voters[key].includes('OUI') ? 'oui' : 'non';
+            
+            // Décrémenter l'ancien vote
+            const votesSnap = await get(votesRef);
+            const votesData = votesSnap.val() || { oui: 0, non: 0 };
+            if (votesData[oldChoice] > 0) {
+              votesData[oldChoice]--;
+            }
+            await set(votesRef, votesData);
+            
+            delete voters[key];
+            break;
+          }
+        }
+      }
 
-    updateDisplay();
-  }
+      const confirmation = confirm(`Confirmes-tu ton vote : ${choice.toUpperCase()} ?\n\nPrénom : ${name}`);
+      if (!confirmation) return;
 
-  updateDisplay();
-</script>
+      // Mettre à jour les votes
+      const snapshot = await get(votesRef);
+      const data = snapshot.val() || { oui: 0, non: 0 };
+      data[choice] = (data[choice] || 0) + 1;
+      await set(votesRef, data);
+
+      // Ajouter le votant
+      voters[Date.now()] = `${name} → ${choice.toUpperCase()}`;
+      await set(votersRef, voters);
+
+      nameInput.value = '';
+      alert(`✅ Vote enregistré pour ${name} !`);
+    }
+
+    // Initialisation
+    get(votesRef).then(updateDisplay);
+    get(votersRef).then(updateVotersList);
+  </script>
 </body>
 </html>
