@@ -46,6 +46,7 @@
     <button onclick="vote('oui')">Oui, évidemment</button>
     <button onclick="vote('non')">Non (menteur)</button>
     <div class="result" id="result"></div>
+    <div class="result" id="voters"></div>
   </div>
 
   <script type="module">
@@ -65,10 +66,13 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const votesRef = ref(db, 'votes');
+  const votersRef = ref(db, 'voters');
 
   let hasVoted = localStorage.getItem('hasVoted');
 
   async function updateDisplay() {
+    const votersSnap = await get(votersRef);
+    const voters = votersSnap.val() || {};() {
     const snapshot = await get(votesRef);
     const data = snapshot.val() || { oui: 0, non: 0 };
 
@@ -77,9 +81,17 @@
       message += '<br><br>🎉 <strong>OBJECTIF ATTEINT</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
     }
     document.getElementById('result').innerHTML = message;
+    document.getElementById('voters').innerHTML = '<br><strong>Ont voté :</strong><br>' + Object.values(voters).join('<br>');
   }
 
   window.vote = async function(choice) {
+    if (hasVoted) {
+      alert('❌ Tu as déjà voté sur CET appareil');
+      return;
+    }
+
+    const name = prompt('Entre ton prénom (obligatoire) :');
+    if (!name) return;
     if (hasVoted) {
       alert('❌ Tu as déjà voté !');
       return;
@@ -93,6 +105,7 @@
 
     data[choice]++;
     await update(votesRef, data);
+    await update(votersRef, { [Date.now()]: name + ' → ' + choice.toUpperCase() });
 
     localStorage.setItem('hasVoted', 'true');
     hasVoted = true;
