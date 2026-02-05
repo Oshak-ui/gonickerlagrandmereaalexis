@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sondage ultra sérieux</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #1e1e1e;
+      padding: 30px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(255,0,0,0.4);
+    }
+    h1 { text-align: center; color: #ff3b3b; }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #ff3b3b;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background: #ff5c5c; }
+    .result { margin-top: 15px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Sondage officiel</h1>
+    <p>📸 Objectif : à <strong>30 oui</strong>, Alexis poste une <strong>photo honteuse</strong> 😈</p>
+    <button onclick="vote('oui')">Oui, évidemment</button>
+    <button onclick="vote('non')">Non (menteur)</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    let votes = { oui: 0, non: 0 };
+
+    function vote(choice) {
+      votes[choice]++;
+      let message = `Oui : ${votes.oui} vote(s)<br>Non : ${votes.non} vote(s)`;
+      if (votes.oui >= 30) {
+        message += '<br><br>🎉 <strong>OBJECTIF ATTEINT</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
+      }
+      document.getElementById('result').innerHTML = message;
+    }
+  </script>
+</body>
+</html>
