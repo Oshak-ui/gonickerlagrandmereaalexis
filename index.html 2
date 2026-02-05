@@ -49,16 +49,40 @@
   </div>
 
   <script>
-    let votes = { oui: 0, non: 0 };
+    let votes = {
+      oui: parseInt(localStorage.getItem('votes_oui')) || 0,
+      non: parseInt(localStorage.getItem('votes_non')) || 0
+    };
 
-    function vote(choice) {
-      votes[choice]++;
+    let hasVoted = localStorage.getItem('hasVoted');
+
+    function updateDisplay() {
       let message = `Oui : ${votes.oui} vote(s)<br>Non : ${votes.non} vote(s)`;
       if (votes.oui >= 30) {
         message += '<br><br>🎉 <strong>OBJECTIF ATTEINT</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
       }
       document.getElementById('result').innerHTML = message;
     }
+
+    function vote(choice) {
+      if (hasVoted) {
+        alert('❌ Tu as déjà voté !');
+        return;
+      }
+
+      const confirmation = confirm(`Confirme-tu ton vote : ${choice.toUpperCase()} ?`);
+      if (!confirmation) return;
+
+      votes[choice]++;
+      localStorage.setItem('votes_oui', votes.oui);
+      localStorage.setItem('votes_non', votes.non);
+      localStorage.setItem('hasVoted', 'true');
+      hasVoted = true;
+
+      updateDisplay();
+    }
+
+    updateDisplay();
   </script>
 </body>
 </html>
