@@ -114,11 +114,6 @@
       border-radius: 4px;
       font-size: 14px;
     }
-    .loading {
-      text-align: center;
-      color: #aaa;
-      padding: 20px;
-    }
     input {
       width: 100%;
       padding: 12px;
@@ -147,20 +142,20 @@
     <div class="counters">
       <div class="counter">
         <div class="counter-label">👍 OUI</div>
-        <div class="counter-value" id="ouiCount">-</div>
+        <div class="counter-value" id="ouiCount">0</div>
       </div>
       <div class="counter">
         <div class="counter-label">👎 NON</div>
-        <div class="counter-value" id="nonCount">-</div>
+        <div class="counter-value" id="nonCount">0</div>
       </div>
     </div>
 
     <input type="text" id="nameInput" placeholder="Entre ton prénom..." maxlength="30" />
     
-    <button id="btnOui" onclick="vote('oui')">✅ Oui, évidemment</button>
-    <button id="btnNon" onclick="vote('non')">❌ Non (menteur)</button>
+    <button id="btnOui">✅ Oui, évidemment</button>
+    <button id="btnNon">❌ Non (menteur)</button>
     
-    <div class="result" id="result"></div>
+    <div class="result" id="result">Chargement de Firebase...</div>
     
     <div class="voters" id="votersSection" style="display: none;">
       <h3>📋 Ont voté :</h3>
@@ -168,133 +163,217 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDXdzhzD0dIKU-uEn-wUMsLo2rYhbFJozg",
-      authDomain: "les-pieds-de-alexis.firebaseapp.com",
-      databaseURL: "https://les-pieds-de-alexis-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "les-pieds-de-alexis",
-      storageBucket: "les-pieds-de-alexis.appspot.com",
-      messagingSenderId: "605697210821",
-      appId: "1:605697210821:web:2915887c8fe5e5244833ac"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const votesRef = ref(db, 'votes');
-    const votersRef = ref(db, 'voters');
-
-    // Écoute en temps réel des changements
-    onValue(votesRef, (snapshot) => {
-      updateDisplay(snapshot);
-    });
-
-    onValue(votersRef, (snapshot) => {
-      updateVotersList(snapshot);
-    });
-
-    function updateDisplay(snapshot) {
-      const data = snapshot.val() || { oui: 0, non: 0 };
+  <!-- Charger Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <script>
+    // Attendre que Firebase soit chargé
+    window.addEventListener('load', function() {
+      console.log('Page chargée, initialisation Firebase...');
       
-      document.getElementById('ouiCount').textContent = data.oui || 0;
-      document.getElementById('nonCount').textContent = data.non || 0;
-
-      const resultDiv = document.getElementById('result');
-      if (data.oui >= 30) {
-        resultDiv.className = 'result success';
-        resultDiv.innerHTML = '🎉 <strong>OBJECTIF ATTEINT !</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
-      } else {
-        resultDiv.className = 'result';
-        const remaining = 30 - (data.oui || 0);
-        resultDiv.innerHTML = `Plus que <strong>${remaining}</strong> OUI pour atteindre l'objectif !`;
-      }
-    }
-
-    function updateVotersList(snapshot) {
-      const voters = snapshot.val() || {};
-      const votersList = document.getElementById('votersList');
-      const votersSection = document.getElementById('votersSection');
-      
-      const votersArray = Object.values(voters);
-      
-      if (votersArray.length === 0) {
-        votersSection.style.display = 'none';
+      // Vérifier que Firebase est disponible
+      if (typeof firebase === 'undefined') {
+        alert('❌ Firebase n\'a pas pu être chargé. Vérifie ta connexion internet.');
         return;
       }
       
-      votersSection.style.display = 'block';
-      votersList.innerHTML = votersArray
-        .reverse() // Les plus récents en premier
-        .map(voter => `<div class="voter-item">${voter}</div>`)
-        .join('');
-    }
+      console.log('Firebase disponible:', firebase);
 
-    window.vote = async function(choice) {
-      const nameInput = document.getElementById('nameInput');
-      const name = nameInput.value.trim();
+      // Configuration Firebase
+      var firebaseConfig = {
+        apiKey: "AIzaSyDXdzhzD0dIKU-uEn-wUMsLo2rYhbFJozg",
+        authDomain: "les-pieds-de-alexis.firebaseapp.com",
+        databaseURL: "https://les-pieds-de-alexis-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "les-pieds-de-alexis",
+        storageBucket: "les-pieds-de-alexis.appspot.com",
+        messagingSenderId: "605697210821",
+        appId: "1:605697210821:web:2915887c8fe5e5244833ac"
+      };
+
+      // Initialiser Firebase
+      firebase.initializeApp(firebaseConfig);
+      var database = firebase.database();
+      var votesRef = database.ref('votes');
+      var votersRef = database.ref('voters');
       
-      if (!name) {
-        alert('❌ Entre ton prénom avant de voter !');
-        nameInput.focus();
-        return;
-      }
+      console.log('✅ Firebase initialisé');
+      document.getElementById('result').innerHTML = 'Prêt à voter !';
 
-      // Vérifier si la personne a déjà voté
-      const votersSnap = await get(votersRef);
-      const voters = votersSnap.val() || {};
-      const nameLower = name.toLowerCase();
-      
-      const alreadyVoted = Object.values(voters).some(voter => {
-        const voterName = voter.split(' → ')[0].toLowerCase();
-        return voterName === nameLower;
-      });
-
-      if (alreadyVoted) {
-        const revote = confirm(`⚠️ "${name}" a déjà voté !\n\nVeux-tu modifier ton vote ?`);
-        if (!revote) return;
+      // Fonction pour mettre à jour l'affichage
+      function updateDisplay(data) {
+        console.log('Mise à jour display:', data);
+        var votes = data || { oui: 0, non: 0 };
         
-        // Supprimer l'ancien vote de cette personne
-        for (let key in voters) {
-          if (voters[key].split(' → ')[0].toLowerCase() === nameLower) {
-            const oldChoice = voters[key].includes('OUI') ? 'oui' : 'non';
-            
-            // Décrémenter l'ancien vote
-            const votesSnap = await get(votesRef);
-            const votesData = votesSnap.val() || { oui: 0, non: 0 };
-            if (votesData[oldChoice] > 0) {
-              votesData[oldChoice]--;
-            }
-            await set(votesRef, votesData);
-            
-            delete voters[key];
-            break;
-          }
+        document.getElementById('ouiCount').textContent = votes.oui || 0;
+        document.getElementById('nonCount').textContent = votes.non || 0;
+
+        var resultDiv = document.getElementById('result');
+        var ouiCount = votes.oui || 0;
+        
+        if (ouiCount >= 30) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML = '🎉 <strong>OBJECTIF ATTEINT !</strong> 🎉<br>Alexis doit poster une photo honteuse 😈';
+        } else {
+          resultDiv.className = 'result';
+          var remaining = 30 - ouiCount;
+          resultDiv.innerHTML = 'Plus que <strong>' + remaining + '</strong> OUI pour atteindre l\'objectif !';
         }
       }
 
-      const confirmation = confirm(`Confirmes-tu ton vote : ${choice.toUpperCase()} ?\n\nPrénom : ${name}`);
-      if (!confirmation) return;
+      // Fonction pour mettre à jour la liste des votants
+      function updateVotersList(voters) {
+        var votersList = document.getElementById('votersList');
+        var votersSection = document.getElementById('votersSection');
+        
+        if (!voters || Object.keys(voters).length === 0) {
+          votersSection.style.display = 'none';
+          return;
+        }
+        
+        votersSection.style.display = 'block';
+        var votersArray = Object.values(voters);
+        var html = '';
+        for (var i = votersArray.length - 1; i >= 0; i--) {
+          html += '<div class="voter-item">' + votersArray[i] + '</div>';
+        }
+        votersList.innerHTML = html;
+      }
 
-      // Mettre à jour les votes
-      const snapshot = await get(votesRef);
-      const data = snapshot.val() || { oui: 0, non: 0 };
-      data[choice] = (data[choice] || 0) + 1;
-      await set(votesRef, data);
+      // Écouter les changements en temps réel
+      votesRef.on('value', function(snapshot) {
+        console.log('Votes reçus:', snapshot.val());
+        updateDisplay(snapshot.val());
+      });
 
-      // Ajouter le votant
-      voters[Date.now()] = `${name} → ${choice.toUpperCase()}`;
-      await set(votersRef, voters);
+      votersRef.on('value', function(snapshot) {
+        console.log('Votants reçus:', snapshot.val());
+        updateVotersList(snapshot.val());
+      });
 
-      nameInput.value = '';
-      alert(`✅ Vote enregistré pour ${name} !`);
-    }
+      // Fonction de vote
+      function faireVote(choice) {
+        console.log('=== DÉBUT VOTE:', choice);
+        
+        var nameInput = document.getElementById('nameInput');
+        var name = nameInput.value.trim();
+        
+        if (!name) {
+          alert('❌ Entre ton prénom avant de voter !');
+          nameInput.focus();
+          return;
+        }
 
-    // Initialisation
-    get(votesRef).then(updateDisplay);
-    get(votersRef).then(updateVotersList);
+        console.log('Prénom:', name);
+
+        // Récupérer les votants
+        votersRef.once('value')
+          .then(function(votersSnapshot) {
+            console.log('Votants récupérés');
+            var voters = votersSnapshot.val() || {};
+            var nameLower = name.toLowerCase();
+            
+            // Chercher si déjà voté
+            var alreadyVotedKey = null;
+            var oldChoice = null;
+            
+            for (var key in voters) {
+              var voterName = voters[key].split(' → ')[0].toLowerCase();
+              if (voterName === nameLower) {
+                alreadyVotedKey = key;
+                oldChoice = voters[key].indexOf('OUI') !== -1 ? 'oui' : 'non';
+                break;
+              }
+            }
+
+            // Si déjà voté
+            if (alreadyVotedKey) {
+              console.log('Déjà voté détecté');
+              var revote = confirm('⚠️ "' + name + '" a déjà voté !\n\nVeux-tu modifier ton vote ?');
+              if (!revote) {
+                console.log('Revote annulé');
+                return Promise.reject('Annulé');
+              }
+              
+              // Supprimer l'ancien vote
+              console.log('Suppression ancien vote');
+              delete voters[alreadyVotedKey];
+              
+              // Décrémenter ancien compteur
+              return votesRef.once('value').then(function(votesSnapshot) {
+                var currentVotes = votesSnapshot.val() || { oui: 0, non: 0 };
+                if (currentVotes[oldChoice] > 0) {
+                  currentVotes[oldChoice]--;
+                }
+                return votesRef.set(currentVotes).then(function() {
+                  return voters;
+                });
+              });
+            } else {
+              return Promise.resolve(voters);
+            }
+          })
+          .then(function(voters) {
+            console.log('Confirmation du vote');
+            var confirmation = confirm('Confirmes-tu ton vote : ' + choice.toUpperCase() + ' ?\n\nPrénom : ' + name);
+            if (!confirmation) {
+              console.log('Vote annulé');
+              return Promise.reject('Annulé');
+            }
+
+            console.log('Récupération votes actuels');
+            // Récupérer votes actuels
+            return votesRef.once('value').then(function(votesSnapshot) {
+              var currentVotes = votesSnapshot.val() || { oui: 0, non: 0 };
+              currentVotes[choice] = (currentVotes[choice] || 0) + 1;
+              
+              console.log('Sauvegarde votes:', currentVotes);
+              // Sauvegarder votes
+              return votesRef.set(currentVotes).then(function() {
+                return voters;
+              });
+            });
+          })
+          .then(function(voters) {
+            console.log('Ajout votant');
+            // Ajouter votant
+            voters[Date.now().toString()] = name + ' → ' + choice.toUpperCase();
+            return votersRef.set(voters);
+          })
+          .then(function() {
+            console.log('✅ Vote enregistré avec succès');
+            nameInput.value = '';
+            alert('✅ Vote enregistré pour ' + name + ' !');
+          })
+          .catch(function(error) {
+            if (error !== 'Annulé') {
+              console.error('❌ Erreur:', error);
+              alert('❌ Erreur: ' + error.message);
+            }
+          });
+      }
+
+      // Attacher les événements
+      document.getElementById('btnOui').onclick = function() {
+        console.log('🖱️ CLIC BOUTON OUI');
+        faireVote('oui');
+      };
+
+      document.getElementById('btnNon').onclick = function() {
+        console.log('🖱️ CLIC BOUTON NON');
+        faireVote('non');
+      };
+
+      // Touche Entrée
+      document.getElementById('nameInput').onkeypress = function(e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          console.log('⌨️ ENTRÉE pressée');
+          faireVote('oui');
+        }
+      };
+
+      console.log('✅ TOUT EST PRÊT !');
+    });
   </script>
 </body>
 </html>
