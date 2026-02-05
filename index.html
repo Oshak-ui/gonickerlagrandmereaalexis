@@ -49,22 +49,17 @@
   </div>
 
   <script type="module">
-  // 🔥 COMPTEUR GLOBAL AVEC FIREBASE (temps réel)
-  // 1) Crée un projet sur https://console.firebase.google.com
-  // 2) Ajoute une application Web
-  // 3) Remplace la config ci-dessous par la tienne
-
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
-    apiKey: "REMPLACE_MOI",
-    authDomain: "REMPLACE_MOI",
-    databaseURL: "REMPLACE_MOI",
-    projectId: "REMPLACE_MOI",
-    storageBucket: "REMPLACE_MOI",
-    messagingSenderId: "REMPLACE_MOI",
-    appId: "REMPLACE_MOI"
+    apiKey: "AIzaSyDXdzhzD0dIKU-uEn-wUMsLo2rYhbFJozg",
+    authDomain: "les-pieds-de-alexis.firebaseapp.com",
+    databaseURL: "https://les-pieds-de-alexis-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "les-pieds-de-alexis",
+    storageBucket: "les-pieds-de-alexis.appspot.com",
+    messagingSenderId: "605697210821",
+    appId: "1:605697210821:web:2915887c8fe5e5244833ac"
   };
 
   const app = initializeApp(firebaseConfig);
